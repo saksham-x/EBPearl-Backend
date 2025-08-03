@@ -1,28 +1,36 @@
 const Tag = require('../models/Tag');
+const ApiError = require('../utils/ApiError');
+const { sendSuccess } = require('../utils/responseHandler');
 
 // Create tag
-exports.createTag = async (req, res) => {
+exports.createTag = async (req, res, next) => {
   try {
     const { name } = req.body;
-    if (!name) return res.status(400).json({ message: 'Tag name is required' });
+
+    if (!name) {
+      return next(new ApiError('Tag name is required', 400));
+    }
 
     const existing = await Tag.findOne({ name });
-    if (existing) return res.status(409).json({ message: 'Tag already exists' });
+    if (existing) {
+      return next(new ApiError('Tag already exists', 409));
+    }
 
     const tag = new Tag({ name });
     await tag.save();
-    res.status(201).json(tag);
+
+    sendSuccess(res, tag, 'Tag created successfully', 201);
   } catch (err) {
-    res.status(500).json({ message: 'Server error' });
+    next(err);
   }
 };
 
 // Get all tags
-exports.getAllTags = async (req, res) => {
+exports.getAllTags = async (req, res, next) => {
   try {
     const tags = await Tag.find().sort({ name: 1 });
-    res.json(tags);
+    sendSuccess(res, tags, 'Tags fetched successfully');
   } catch (err) {
-    res.status(500).json({ message: 'Server error' });
+    next(err);
   }
 };

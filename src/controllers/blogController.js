@@ -1,22 +1,22 @@
 const Blog = require('../models/Blog');
+const ApiError = require('../utils/ApiError');
+const { sendSuccess } = require('../utils/responseHandler');
 
 // Create a blog
-exports.createBlog = async (req, res) => {
+exports.createBlog = async (req, res,next) => {
   try {
     const { title, description, tags } = req.body;
-    if (!title || !description) {
-      return res.status(400).json({ message: 'Title and description are required' });
-    }
-    const blog = new Blog({ title, description,tags });
+      const blog = new Blog({ title, description,tags, author: req.user.id });
     await blog.save();
-    res.status(201).json(blog);
+
+     sendSuccess(res, blog, 'Blog created successfully oo', 201);  
   } catch (error) {
-    res.status(500).json({ message: 'Server Error' });
+   next(error);
   }
 };
 
 // Get all blogs
-exports.getAllBlogs = async (req, res) => {
+exports.getAllBlogs = async (req, res, next) => {
   try {
     const { tag, search, sort } = req.query;
     const filter = {};
@@ -37,50 +37,69 @@ exports.getAllBlogs = async (req, res) => {
     }
     const blogs = await Blog.find(filter)
       .sort({ createdAt: -1 })
-      .populate('tags', 'name');
-
-    res.json(blogs);
+      .populate('tags', 'name')
+      .populate('author', 'name email');
+sendSuccess(res, blogs, 'Blogs fetched successfully');
   } catch (error) {
-    res.status(500).json({ message: 'Server Error' });
+  next(error);
   }
 };
+
+
+// get my blog 
+exports.getAllMyBlogs = async (req, res, next) => {
+  try {
+   const blogs = await Blog.find({ author: req.user.userId });
+  sendSuccess(res, blogs, 'Your blogs');
+  } catch (error) {
+  next(error);
+  }
+};
+
 
 
 // Get single blog by ID
-exports.getBlogById = async (req, res) => {
+exports.getBlogById = async (req, res, next) => {
   try {
-    const blog = await Blog.findById(req.params.id);
-    if (!blog) return res.status(404).json({ message: 'Blog not found' }).populate('tags',"name");
-    res.json(blog);
+    const blog = await Blog.findById(req.params.id).populate('tags', 'name').populate('author', 'name email');
+    if (!blog){
+      return next(new ApiError('Blog not found', 404));
+    }
+
+    sendSuccess(res, blog, 'Blog fetched successfully');
+    
   } catch (error) {
-    res.status(500).json({ message: 'Server Error' });
-  }
+    next(error);}
 };
 
 // Update blog by ID
-exports.updateBlog = async (req, res) => {
+exports.updateBlog = async (req, res, next) => {
   try {
-    const { title, description } = req.body;
+    const { title, description, tag } = req.body;
     const blog = await Blog.findById(req.params.id);
-    if (!blog) return res.status(404).json({ message: 'Blog not found' });
+    if (!blog){
+       return next(new ApiError('Blog not found', 404));
+    }
 
     if (title) blog.title = title;
     if (description) blog.description = description;
 
     await blog.save();
-    res.json(blog);
+ sendSuccess(res, blog, 'Blog updated successfully');
   } catch (error) {
-    res.status(500).json({ message: 'Server Error' });
+    next(error);
   }
 };
 
 // Delete blog by ID
-exports.deleteBlog = async (req, res) => {
+exports.deleteBlog = async (req, res, next) => {
   try {
     const blog = await Blog.findByIdAndDelete(req.params.id);
-    if (!blog) return res.status(404).json({ message: 'Blog not found' });
-    res.json({ message: 'Blog deleted successfully' });
+    if (!blog) {
+      return next(new ApiError('Blog not found', 404));
+    }
+
+    sendSuccess(res, blog, 'Blog deleted successfully');
   } catch (error) {
-    res.status(500).json({ message: 'Server Error' });
-  }
+    next(error);}
 };

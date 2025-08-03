@@ -17,7 +17,12 @@ const blogSchema = new mongoose.Schema({
   tags: [{
   type: mongoose.Schema.Types.ObjectId,
   ref: 'Tag',
-}]
+}],
+author: {
+  type: mongoose.Schema.Types.ObjectId,
+  ref: 'User',
+  required: true,
+},
 });
 
 module.exports = mongoose.model('Blog', blogSchema);
