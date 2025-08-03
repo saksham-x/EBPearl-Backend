@@ -5,14 +5,14 @@ const { sendSuccess } = require('../utils/responseHandler');
 // Create comment
 exports.addComment = async (req, res, next) => {
   try {
-    const { authorName, text } = req.body;
+    const {  text } = req.body;
     const { blogId } = req.params;
 
-    if (!authorName || !text) {
-      return next(new ApiError('authorName and text are required', 400));
+    if (!text) {
+      return next(new ApiError("Comment can't be empty", 400));
     }
 
-    const comment = new Comment({ blogId, authorName, text });
+    const comment = new Comment({ blogId, author: req.user.id, text });
     await comment.save();
 
     sendSuccess(res, comment, 'Comment added successfully', 201);
@@ -25,7 +25,7 @@ exports.addComment = async (req, res, next) => {
 exports.getCommentsByBlog = async (req, res, next) => {
   try {
     const { blogId } = req.params;
-    const comments = await Comment.find({ blogId }).sort({ createdAt: -1 });
+    const comments = await Comment.find({ blogId }).sort({ createdAt: -1 }).populate('author', 'name email');
 
     sendSuccess(res, comments, 'Comments fetched successfully');
   } catch (error) {

@@ -1,17 +1,18 @@
-const Blog = require('../models/Blog');
-const ApiError = require('../utils/ApiError');
-const { sendSuccess } = require('../utils/responseHandler');
+const Blog = require("../models/Blog");
+const Comment = require("../models/Comment");
+const ApiError = require("../utils/ApiError");
+const { sendSuccess } = require("../utils/responseHandler");
 
 // Create a blog
-exports.createBlog = async (req, res,next) => {
+exports.createBlog = async (req, res, next) => {
   try {
     const { title, description, tags } = req.body;
-      const blog = new Blog({ title, description,tags, author: req.user.id });
+    const blog = new Blog({ title, description, tags, author: req.user.id });
     await blog.save();
 
-     sendSuccess(res, blog, 'Blog created successfully oo', 201);  
+    sendSuccess(res, blog, "Blog created successfully oo", 201);
   } catch (error) {
-   next(error);
+    next(error);
   }
 };
 
@@ -22,54 +23,80 @@ exports.getAllBlogs = async (req, res, next) => {
     const filter = {};
 
     if (tag) {
-      filter.tags = tag; 
+      filter.tags = tag;
     }
-      if (search) {
+    if (search) {
       filter.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } }
+        { title: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
       ];
     }
 
-     let sortOption = { createdAt: -1 };
-    if (sort === 'oldest') {
+    let sortOption = { createdAt: -1 };
+    if (sort === "oldest") {
       sortOption = { createdAt: 1 };
     }
     const blogs = await Blog.find(filter)
       .sort({ createdAt: -1 })
-      .populate('tags', 'name')
-      .populate('author', 'name email');
-sendSuccess(res, blogs, 'Blogs fetched successfully');
+      .populate("tags", "name")
+      .populate("author", "name email");
+
+    const blogsWithComments = await Promise.all(
+      blogs.map(async (blog) => {
+        const comments = await Comment.find({ blogId: blog._id })
+          .populate("author", "name email")
+          .sort({ createdAt: -1 });
+
+        return {
+          ...blog.toObject(),
+          comments,
+        };
+      })
+    );
+
+    sendSuccess(res, blogsWithComments, "Blogs fetched successfully");
   } catch (error) {
-  next(error);
+    next(error);
   }
 };
 
-
-// get my blog 
+// get my blog
 exports.getAllMyBlogs = async (req, res, next) => {
   try {
-   const blogs = await Blog.find({ author: req.user.userId });
-  sendSuccess(res, blogs, 'Your blogs');
+    const blogs = await Blog.find({ author: req.user.id });
+
+    const blogsWithComments = await Promise.all(
+      blogs.map(async (blog) => {
+        const comments = await Comment.find({ blogId: blog._id })
+          .populate("author", "name email")
+          .sort({ createdAt: -1 });
+
+        return {
+          ...blog.toObject(),
+          comments,
+        };
+      })
+    );
+    sendSuccess(res, blogsWithComments, "Your blogs");
   } catch (error) {
-  next(error);
+    next(error);
   }
 };
-
-
 
 // Get single blog by ID
 exports.getBlogById = async (req, res, next) => {
   try {
-    const blog = await Blog.findById(req.params.id).populate('tags', 'name').populate('author', 'name email');
-    if (!blog){
-      return next(new ApiError('Blog not found', 404));
+    const blog = await Blog.findById(req.params.id)
+      .populate("tags", "name")
+      .populate("author", "name email");
+    if (!blog) {
+      return next(new ApiError("Blog not found", 404));
     }
 
-    sendSuccess(res, blog, 'Blog fetched successfully');
-    
+    sendSuccess(res, blog, "Blog fetched successfully");
   } catch (error) {
-    next(error);}
+    next(error);
+  }
 };
 
 // Update blog by ID
@@ -77,15 +104,15 @@ exports.updateBlog = async (req, res, next) => {
   try {
     const { title, description, tag } = req.body;
     const blog = await Blog.findById(req.params.id);
-    if (!blog){
-       return next(new ApiError('Blog not found', 404));
+    if (!blog) {
+      return next(new ApiError("Blog not found", 404));
     }
 
     if (title) blog.title = title;
     if (description) blog.description = description;
 
     await blog.save();
- sendSuccess(res, blog, 'Blog updated successfully');
+    sendSuccess(res, blog, "Blog updated successfully");
   } catch (error) {
     next(error);
   }
@@ -96,10 +123,11 @@ exports.deleteBlog = async (req, res, next) => {
   try {
     const blog = await Blog.findByIdAndDelete(req.params.id);
     if (!blog) {
-      return next(new ApiError('Blog not found', 404));
+      return next(new ApiError("Blog not found", 404));
     }
 
-    sendSuccess(res, blog, 'Blog deleted successfully');
+    sendSuccess(res, blog, "Blog deleted successfully");
   } catch (error) {
-    next(error);}
+    next(error);
+  }
 };
