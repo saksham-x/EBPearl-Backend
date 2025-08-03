@@ -3,11 +3,11 @@ const Blog = require('../models/Blog');
 // Create a blog
 exports.createBlog = async (req, res) => {
   try {
-    const { title, description } = req.body;
+    const { title, description, tags } = req.body;
     if (!title || !description) {
       return res.status(400).json({ message: 'Title and description are required' });
     }
-    const blog = new Blog({ title, description });
+    const blog = new Blog({ title, description,tags });
     await blog.save();
     res.status(201).json(blog);
   } catch (error) {
@@ -18,18 +18,39 @@ exports.createBlog = async (req, res) => {
 // Get all blogs
 exports.getAllBlogs = async (req, res) => {
   try {
-    const blogs = await Blog.find().sort({ createdAt: -1 });
+    const { tag, search, sort } = req.query;
+    const filter = {};
+
+    if (tag) {
+      filter.tags = tag; 
+    }
+      if (search) {
+      filter.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+     let sortOption = { createdAt: -1 };
+    if (sort === 'oldest') {
+      sortOption = { createdAt: 1 };
+    }
+    const blogs = await Blog.find(filter)
+      .sort({ createdAt: -1 })
+      .populate('tags', 'name');
+
     res.json(blogs);
   } catch (error) {
     res.status(500).json({ message: 'Server Error' });
   }
 };
 
+
 // Get single blog by ID
 exports.getBlogById = async (req, res) => {
   try {
     const blog = await Blog.findById(req.params.id);
-    if (!blog) return res.status(404).json({ message: 'Blog not found' });
+    if (!blog) return res.status(404).json({ message: 'Blog not found' }).populate('tags',"name");
     res.json(blog);
   } catch (error) {
     res.status(500).json({ message: 'Server Error' });

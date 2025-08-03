@@ -13,7 +13,11 @@ app.get('/', (req, res) => {
 
 // Add at top with other imports
 const blogRoutes = require('./routes/blogRoutes');
+const commentRoutes = require('./routes/commentRoutes');
+const tagRoutes = require('./routes/tagRoutes');
 
+app.use('/api', tagRoutes);
+app.use('/api', commentRoutes);
 app.use('/api/blogs', blogRoutes);
 
 

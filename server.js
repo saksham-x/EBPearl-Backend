@@ -1,4 +1,4 @@
-const app = require('./src/app');  // note the new path
+const app = require('./src/app');  
 const mongoose = require('mongoose');
 require('dotenv').config();
 
