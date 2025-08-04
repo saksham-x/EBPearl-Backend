@@ -48,7 +48,7 @@ Example endpoint:
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/your-username/blog-platform-api
-cd blog-platform-api
+git clone https://github.com/saksham-x/EBPearl-Backend
+cd EBPearl-Backend
 npm install
 ```
